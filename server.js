@@ -34,24 +34,27 @@ const upload = multer({
 
 //var maxSize =30*1024*1024
 //var compressfilesupload = multer({storage:storage, limits:{fileSize:maxSize}}).single("file")
+app.get('/initial',(req,res)=>{
+    const __dirname = path.resolve(path.dirname(''));
+    rimraf(path.join(__dirname,'./uploads/*'),()=>{
+        console.log("Initial deletes!")
+    })
+    rimraf(path.join(__dirname,'./output/*'),()=>{
+        console.log("Successfully deleted compressed folder!")
+    })
+    rimraf(path.join(__dirname,'./FinalZip/*'),()=>{
+        console.log("Initial deletes!")
+    })
+    rimraf(path.join(__dirname,'./compressed/*'),()=>{
+        console.log("Initial deletes!")
+    })
+    console.log('Initial Deletes')
+    res.send("ok")
+})
 
 app.post('/upload',(req,res)=>{
 
     const __dirname = path.resolve(path.dirname(''));
-
-    async function doInitialDeletes(){
-        await rimraf(path.join(__dirname,'./output/*'),()=>{
-            console.log("Successfully deleted compressed folder!")
-        })
-        await rimraf(path.join(__dirname,'./FinalZip/*'),()=>{
-            console.log("Initial deletes!")
-        })
-        await rimraf(path.join(__dirname,'./compressed/*'),()=>{
-            console.log("Initial deletes!")
-        })
-    }
-    
-    doInitialDeletes()
 
     upload(req,res,(err)=>{
         if(err){
@@ -60,12 +63,35 @@ app.post('/upload',(req,res)=>{
             console.log(req.file)
             const zip = new admzip(`${req.file.path}`)
             zip.extractAllTo('./output')
+            /*fs.createReadStream(`${req.file.path}`)
+                .pipe(unzipper.Extract({path: `./output`}))*/
                 
                 rimraf(path.join(__dirname,'./uploads/*'),()=>{
                     console.log("Successfully deleted!")
                 })
+
+                var Name = readAllFolder('./output/')
+                function readAllFolder(dirMain){
+                    const readDirMain = fs.readdirSync(dirMain);
+                    console.log(readDirMain);
+                    for(let i of readDirMain){
+                        var stats = fs.statSync(dirMain+i)
+                        if(stats.isDirectory()){
+                            var read2 = fs.readdirSync(dirMain+i)
+                            for(let j of read2){
+                                if(j.endsWith('.json')){
+                                    return i;
+                                }
+                            }
+                        }
+                    }
+                  
+                  }
+                  console.log(Name)
+                  
             }
-            res.status(200).send({message:true,name: req.file.originalname})
+
+            res.status(200).send({message:true,name: Name})
     })
     
     
@@ -74,7 +100,6 @@ app.post('/upload',(req,res)=>{
 app.post('/update',(req,res)=>{
     let name = req.body.name
     const __dirname = path.resolve(path.dirname(''));
-    name = name.substr(0,name.length-4)
     let dir = Buffer.from(path.join(`./output/${name}`))
     let Files = fs.readdirSync(dir)
 
@@ -161,9 +186,7 @@ app.post("/compress",(req,res)=>{
         
         zip.addLocalFolder(`./output/${name}`)
         fs.writeFileSync(`./FinalZip/${outputPath}`,zip.toBuffer())
-        rimraf(path.join(__dirname,'./output/*'),()=>{
-            console.log("Output Final deletes!")
-        })
+        
         res.download(`./FinalZip/${outputPath}`,err=>{
             console.log(err)
         })
@@ -172,10 +195,3 @@ app.post("/compress",(req,res)=>{
 
 
 app.listen(port,()=>console.log(`listening to port ${port}`))
-
- //zip.writeZip(__dirname+"/"+outputPath)
-        //const data = zip.toBuffer()
-        //res.set('Content-Type','application/octet-stream');
-        //res.set('Content-Disposition',`attachment; filename=${outputPath}`);
-        //res.set('Content-Length',data.length);
-        //res.send(data);
