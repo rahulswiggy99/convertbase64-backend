@@ -154,12 +154,14 @@ app.post('/update',(req,res)=>{
                 JsonData.map(card=>(
                     card.assets.map(res1=>(
                         ('p' in res1)?(
-                            (res1.p.length<80) ? res1.p = convertImageToBase64(res1.p) : ''
+                            res1.u="",res1.e=1,(res1.p.length<80) ?(
+                                res1.p = convertImageToBase64(res1.p)
+                            ) : ''
                         ):""
                     ))
                 ))
-
-                fs.writeFile(`./output/${name}/${JsonFileName}`,JSON.stringify(JsonData[0]),'utf-8',(err)=>{
+               
+                fs.writeFile(`./output/${name}/${JsonFileName}`,JSON.stringify(JsonData[0],null,2),'utf-8',(err)=>{
                     if(err) console.log(err)
                     else console.log("Updates Done! Check the Json File")
                 })
@@ -182,12 +184,12 @@ app.post("/compress",(req,res)=>{
         var size = stats['size']
         console.log(stats,size)
         var outputPath = Date.now()+"-output.zip"
-        const zip = new admzip()
+        //const zip = new admzip()
         
-        zip.addLocalFolder(`./output/${name}`)
-        fs.writeFileSync(`./FinalZip/${outputPath}`,zip.toBuffer())
-        
-        res.download(`./FinalZip/${outputPath}`,err=>{
+        //zip.addLocalFolder(`./output/${name}`)
+        //fs.writeFileSync(`./FinalZip/${outputPath}`,zip.toBuffer())
+
+        res.download(`./output/${name}/${JsonFileName}`,err=>{
             console.log(err)
         })
 })
