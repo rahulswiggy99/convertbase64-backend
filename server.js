@@ -63,8 +63,6 @@ app.post('/upload',(req,res)=>{
             console.log(req.file)
             const zip = new admzip(`${req.file.path}`)
             zip.extractAllTo('./output')
-            /*fs.createReadStream(`${req.file.path}`)
-                .pipe(unzipper.Extract({path: `./output`}))*/
                 
                 rimraf(path.join(__dirname,'./uploads/*'),()=>{
                     console.log("Successfully deleted!")
@@ -141,8 +139,17 @@ app.post('/update',(req,res)=>{
 
     dotaskToCompress()
     function convertImageToBase64(imageName) {
-    
-        return fs.readFileSync(`./compressed/${imageName}`,'base64')  //Take care of the name of the folder as images
+        var z = ""
+        if(imageName.endsWith('.png')){
+            z = "data:image/png;base64,"
+        }
+        if(imageName.endsWith('.jpeg')){
+            z="data:image/jpeg;base64,"
+        }
+        if(imageName.endsWith('.jpg')){
+            z="data:image/jpg;base64,"
+        }
+        return z + fs.readFileSync(`./compressed/${imageName}`,'base64')  //Take care of the name of the folder as images
     }
     function TaskToUpdate(JsonFileName) {
         let JsonData=[]
@@ -161,7 +168,7 @@ app.post('/update',(req,res)=>{
                     ))
                 ))
                
-                fs.writeFile(`./output/${name}/${JsonFileName}`,JSON.stringify(JsonData[0],null,2),'utf-8',(err)=>{
+                fs.writeFile(`./output/${name}/${JsonFileName}`,JSON.stringify(JsonData[0]),'utf-8',(err)=>{
                     if(err) console.log(err)
                     else console.log("Updates Done! Check the Json File")
                 })
@@ -169,10 +176,11 @@ app.post('/update',(req,res)=>{
                 rimraf(path.join(__dirname,'./compressed/*'),()=>{
                     console.log("Successfully deleted compressed folder!")
                 })
+
+                res.status(200).send({name:name,JsonFileName:JsonFileName,JsonData: JSON.stringify(JsonData[0])})
                 
             }
         })
-        res.status(200).send({name:name,JsonFileName:JsonFileName})
     }
 
 })
@@ -183,7 +191,7 @@ app.post("/compress",(req,res)=>{
     var stats = fs.statSync(`./output/${name}/${JsonFileName}`)
         var size = stats['size']
         console.log(stats,size)
-        var outputPath = Date.now()+"-output.zip"
+        //var outputPath = Date.now()+"-output.zip"
         //const zip = new admzip()
         
         //zip.addLocalFolder(`./output/${name}`)
