@@ -19,10 +19,6 @@ const port=process.env.PORT||8000
 app.use(express.static('../lottie-extractor/build'))
 app.use(express.json())
 
-app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, '../lottie-extractor/build/index.html'));
-});
-
 const storage = multer.diskStorage({
     destination: './uploads/',
     filename: function(req,file,cb){
