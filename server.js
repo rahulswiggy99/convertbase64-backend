@@ -4,7 +4,8 @@ import path from 'path'
 import fs from 'fs'
 import rimraf from 'rimraf'
 import compress_images from 'compress-images'
-import admzip from 'adm-zip'
+import extractzip from 'extract-zip'
+//import unzipper from 'unzipper'
 
 const app = express()
 
@@ -41,6 +42,9 @@ app.get('/initial',(req,res)=>{
     rimraf(path.join(__dirname,'./output/*'),()=>{
         console.log("Successfully deleted compressed folder!")
     })
+    rimraf(path.join(__dirname,'./log/*'),()=>{
+        console.log("Successfully deleted Log folder!")
+    })
     rimraf(path.join(__dirname,'./FinalZip/*'),()=>{
         console.log("Initial deletes!")
     })
@@ -54,22 +58,51 @@ app.get('/initial',(req,res)=>{
 app.post('/upload',(req,res)=>{
 
     const __dirname = path.resolve(path.dirname(''));
-
+    async function Extract(source,target){
+        try {
+            await extractzip(source,{dir : target},(err,file)=>{
+                console.log(file)
+            })
+        }catch(err){
+            console.log("Extracting Zip error!")
+        }
+    }
     upload(req,res,(err)=>{
         if(err){
             console.log(err)
         }else{
             console.log(req.file)
-            const zip = new admzip(`${req.file.path}`)
-            zip.extractAllTo('./output')
-                
-                rimraf(path.join(__dirname,'./uploads/*'),()=>{
-                    console.log("Successfully deleted!")
+            //const zip = new admzip(`${req.file.path}`)
+            //zip.extractAllTo('./output')
+            
+                const source = req.file.path
+                const target = __dirname+'/output'
+                extractzip(source,{dir : target}).then(()=>{
+                    console.log('done')
+                    rimraf(path.join(__dirname,'./uploads/*'),()=>{
+                        console.log("Successfully deleted!")
+                    })
+    
+                    var Name = readAllFolder('./output/')
+                    console.log(Name)
+                    if(Name.length){
+                        res.status(200).send({message:true,name: "/"+Name})
+                    }else{
+                        res.status(200).send({message:true,name: ""})
+                    }
                 })
-
-                var Name = readAllFolder('./output/')
                 function readAllFolder(dirMain){
                     const readDirMain = fs.readdirSync(dirMain);
+                    console.log(readDirMain);
+                    for(let i of readDirMain){
+                        var stats = fs.statSync(dirMain+i)
+                        if(stats.isFile()){
+                            return ""
+                        }
+                    }
+                    return readDirMain[0]
+                }
+                    /*const readDirMain = fs.readdirSync(dirMain);
                     console.log(readDirMain);
                     for(let i of readDirMain){
                         var stats = fs.statSync(dirMain+i)
@@ -81,14 +114,9 @@ app.post('/upload',(req,res)=>{
                                 }
                             }
                         }
-                    }
+                    }*/
                   
                   }
-                  console.log(Name)
-                  
-            }
-
-            res.status(200).send({message:true,name: Name})
     })
     
     
@@ -97,7 +125,7 @@ app.post('/upload',(req,res)=>{
 app.post('/update',(req,res)=>{
     let name = req.body.name
     const __dirname = path.resolve(path.dirname(''));
-    let dir = Buffer.from(path.join(`./output/${name}`))
+    let dir = Buffer.from(path.join(`./output${name}`))
     let Files = fs.readdirSync(dir)
 
     let JsonFileName=""
@@ -111,7 +139,7 @@ app.post('/update',(req,res)=>{
     var OUTPUT_path = "./compressed/";
     const ProcessImages=()=>{          //creates a new compresed folder where all the compressed images are stored
         return new Promise((resolve, reject)=>{
-            compress_images(`./output/${name}/images/**/*{jpg,JPG,jpeg,JPEG,png,svg,gif}`, OUTPUT_path, { compress_force: false, statistic: true, autoupdate: true }, false,
+            compress_images(`./output${name}/images/**/*{jpg,JPG,jpeg,JPEG,png,svg,gif}`, OUTPUT_path, { compress_force: false, statistic: true, autoupdate: true }, false,
             { jpg: { engine: "mozjpeg", command: ["-quality", "60"] } },
             { png: { engine: "pngquant", command: ["--quality=20-50", "-o"] } },
             { svg: { engine: "svgo", command: "--multipass" } },
@@ -153,7 +181,7 @@ app.post('/update',(req,res)=>{
     function TaskToUpdate(JsonFileName) {
         let JsonData=[]
         console.log(JsonFileName)
-        fs.readFile(`./output/${name}/${JsonFileName}`,'utf-8',(err,data)=>{
+        fs.readFile(`./output${name}/${JsonFileName}`,'utf-8',(err,data)=>{
             if(err) console.log(err);
             else{
                 JsonData.push(JSON.parse(data))
@@ -167,7 +195,7 @@ app.post('/update',(req,res)=>{
                     ))
                 ))
                
-                fs.writeFile(`./output/${name}/${JsonFileName}`,JSON.stringify(JsonData[0]),'utf-8',(err)=>{
+                fs.writeFile(`./output${name}/${JsonFileName}`,JSON.stringify(JsonData[0]),'utf-8',(err)=>{
                     if(err) console.log(err)
                     else console.log("Updates Done! Check the Json File")
                 })
@@ -187,7 +215,7 @@ app.post('/update',(req,res)=>{
 app.post("/compress",(req,res)=>{
     const {name,JsonFileName} = req.body
     const __dirname = path.resolve(path.dirname(''));
-    var stats = fs.statSync(`./output/${name}/${JsonFileName}`)
+    var stats = fs.statSync(`./output${name}/${JsonFileName}`)
         var size = stats['size']
         console.log(stats,size)
         //var outputPath = Date.now()+"-output.zip"
@@ -196,7 +224,7 @@ app.post("/compress",(req,res)=>{
         //zip.addLocalFolder(`./output/${name}`)
         //fs.writeFileSync(`./FinalZip/${outputPath}`,zip.toBuffer())
 
-        res.download(`./output/${name}/${JsonFileName}`,err=>{
+        res.download(`./output${name}/${JsonFileName}`,err=>{
             console.log(err)
         })
 })
